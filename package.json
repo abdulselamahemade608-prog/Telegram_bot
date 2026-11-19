@@ -1,0 +1,11 @@
+{
+  "name": "invite-earn-bot",
+  "version": "1.0.0",
+  "private": true,
+  "main": "api/index.js",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Invite &amp; Earn</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F3F5FB;
+    --card: #FFFFFF;
+    --ink: #1B1F3B;
+    --muted: #6C7193;
+    --line: #E3E6F3;
+    --accent: #4B5BFF;
+    --accent-ink: #FFFFFF;
+    --coin: #FFC933;
+    --ok: #1FA971;
+    --bad: #D8453B;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12142A; --card: #1C1F3D; --ink: #F1F2FF; --muted: #9A9FC8;
+      --line: #2C3060; --accent: #7B88FF; --accent-ink: #12142A;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'Sora', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px; }
+  h1, h2, h3, p { margin: 0; }
+
+  .balance { text-align: center; padding: 28px 0 22px; }
+  .balance small { color: var(--muted); font-size: 14px; }
+  .coins { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; }
+  .coin {
+    width: 44px; height: 44px; border-radius: 50%; background: var(--coin);
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,.12); display: grid; place-items: center;
+    font-weight: 800; color: #6B4A00; font-size: 20px;
+  }
+  .amount { font-size: 48px; font-weight: 800; letter-spacing: -1px; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .grow { flex: 1; min-width: 0; }
+  .title { font-weight: 600; font-size: 15px; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  button {
+    font-family: inherit; font-weight: 600; font-size: 14px; border: 0; cursor: pointer;
+    border-radius: 12px; padding: 11px 16px; background: var(--accent); color: var(--accent-ink);
+  }
+  button.ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  button.done { background: transparent; color: var(--ok); cursor: default; }
+  button:disabled { opacity: .55; }
+  button.big { width: 100%; padding: 14px; font-size: 15px; }
+  button:focus-visible { outline: 3px solid var(--coin); outline-offset: 2px; }
+
+  .reward { font-weight: 800; color: #B47E00; font-size: 13px; }
+  @media (prefers-color-scheme: dark) { .reward { color: var(--coin); } }
+
+  .linkbox {
+    background: var(--bg); border: 1px dashed var(--line); border-radius: 12px;
+    padding: 12px; font-size: 12px; word-break: break-all; color: var(--muted); margin: 12px 0;
+  }
+  .stat { display: flex; justify-content: space-between; margin-top: 14px; font-size: 14px; }
+  .empty { text-align: center; color: var(--muted); padding: 28px 12px; font-size: 14px; }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center; font-weight: 800;
+  }
+
+  nav {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line);
+    display: flex; padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  nav button { flex: 1; background: transparent; color: var(--muted); border-radius: 12px; padding: 10px 4px; font-size: 13px; }
+  nav button.on { color: var(--accent); background: var(--bg); }
+
+  #toast {
+    position: fixed; left: 50%; top: 14px; transform: translate(-50%, -80px); transition: transform .25s;
+    background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 12px; font-size: 14px;
+    z-index: 9; max-width: 90%; text-align: center;
+  }
+  #toast.show { transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div id="toast" role="status"></div>
+
+<main class="wrap">
+  <section id="tab-home">
+    <div class="balance">
+      <small>Your balance</small>
+      <div class="coins"><div class="coin">$</div><div class="amount" id="balance">0</div></div>
+    </div>
+    <div class="card">
+      <h3>Invite friends</h3>
+      <p class="sub" id="refText">Earn coins for every friend who joins.</p>
+      <div style="margin-top:12px"><button class="big" onclick="show('friends')">Invite now</button></div>
+    </div>
+    <div class="card">
+      <h3>Complete tasks</h3>
+      <p class="sub">Finish simple tasks and collect coins.</p>
+      <div style="margin-top:12px"><button class="big ghost" onclick="show('tasks')">See tasks</button></div>
+    </div>
+  </section>
+
+  <section id="tab-tasks" class="hidden">
+    <h2 style="margin-bottom:14px">Tasks</h2>
+    <div id="taskList"></div>
+  </section>
+
+  <section id="tab-friends" class="hidden">
+    <h2 style="margin-bottom:14px">Invite friends</h2>
+    <div class="card">
+      <p class="sub">Share your link. When a friend opens the app, you get <b id="refBonus">100</b> coins.</p>
+      <div class="linkbox" id="link">Loading…</div>
+      <div class="row">
+        <button class="grow" onclick="shareLink()">Share link</button>
+        <button class="ghost" onclick="copyLink()">Copy</button>
+      </div>
+      <div class="stat"><span class="sub">Friends invited</span><b id="refCount">0</b></div>
+    </div>
+    <h3 style="margin:18px 0 10px">Your friends</h3>
+    <div id="friendList"></div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="home" class="on" onclick="show('home')">Home</button>
+  <button data-tab="tasks" onclick="show('tasks')">Tasks</button>
+  <button data-tab="friends" onclick="show('friends')">Friends</button>
+</nav>
+
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const INIT = tg ? tg.initData : '';
+let STATE = { link: '', wait: 10 };
+
+async function api(path, method = 'GET', body) {
+  const r = await fetch(path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'x-init-data': INIT },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Something went wrong. Try again.');
+  return j;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function show(name) {
+  ['home', 'tasks', 'friends'].forEach(n => document.getElementById('tab-' + n).classList.toggle('hidden', n !== name));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  if (name === 'tasks') loadTasks();
+  if (name === 'friends') loadFriends();
+}
+
+function setUser(u) {
+  document.getElementById('balance').textContent = Number(u.balance).toLocaleString();
+  document.getElementById('refCount').textContent = u.ref_count;
+}
+
+async function init() {
+  try {
+    const d = await api('/api/init', 'POST');
+    STATE.link = d.inviteLink; STATE.wait = d.waitSeconds;
+    setUser(d.user);
+    document.getElementById('refBonus').textContent = d.refBonus;
+    document.getElementById('refText').textContent = `Earn ${d.refBonus} coins for every friend who joins.`;
+    document.getElementById('link').textContent = d.inviteLink || 'Invite link is not set up yet.';
+  } catch (e) { toast(e.message); }
+}
+
+// ---------- Tasks ----------
+async function loadTasks() {
+  const box = document.getElementById('taskList');
+  try {
+    const { tasks } = await api('/api/tasks');
+    if (!tasks.length) { box.innerHTML = '<div class="empty">No tasks yet. Check back soon.</div>'; return; }
+    box.innerHTML = tasks.map(t => `
+      <div class="card row">
+        <div class="grow">
+          <div class="title">${esc(t.title)}</div>
+          <div class="sub"><span class="reward">+${t.reward}</span> coins</div>
+        </div>
+        ${t.done
+          ? '<button class="done" disabled>Done</button>'
+          : t.started
+            ? `<button onclick="claimTask(${t.id}, this)">Claim</button>`
+            : `<button onclick="startTask(${t.id}, '${esc(t.url)}', this)">Start</button>`}
+      </div>`).join('');
+  } catch (e) { toast(e.message); }
+}
+
+async function startTask(id, url, btn) {
+  btn.disabled = true;
+  try {
+    await api('/api/task/start', 'POST', { taskId: id });
+    if (tg && url.startsWith('https://t.me/')) tg.openTelegramLink(url);
+    else if (tg) tg.openLink(url);
+    else window.open(url, '_blank');
+    let left = STATE.wait;
+    btn.textContent = left + 's';
+    const timer = setInterval(() => {
+      left--;
+      if (left <= 0) {
+        clearInterval(timer);
+        btn.textContent = 'Claim'; btn.disabled = false;
+        btn.onclick = () => claimTask(id, btn);
+      } else btn.textContent = left + 's';
+    }, 1000);
+  } catch (e) { toast(e.message); btn.disabled = false; }
+}
+
+async function claimTask(id, btn) {
+  btn.disabled = true;
+  try {
+    const r = await api('/api/task/claim', 'POST', { taskId: id });
+    toast(`+${r.reward} coins`);
+    document.getElementById('balance').textContent = Number(r.balance).toLocaleString();
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    loadTasks();
+  } catch (e) { toast(e.message); btn.disabled = false; }
+}
+
+// ---------- Friends ----------
+async function loadFriends() {
+  const box = document.getElementById('friendList');
+  try {
+    const { friends } = await api('/api/friends');
+    if (!friends.length) { box.innerHTML = '<div class="empty">No friends yet. Share your link to get started.</div>'; return; }
+    box.innerHTML = friends.map(f => {
+      const name = f.first_name || f.username || 'Friend';
+      return `<div class="card row"><div class="avatar">${esc(name[0].toUpperCase())}</div>
+        <div class="grow"><div class="title">${esc(name)}</div>
+        <div class="sub">${f.username ? '@' + esc(f.username) : 'Joined'}</div></div></div>`;
+    }).join('');
+  } catch (e) { toast(e.message); }
+}
+
+function shareLink() {
+  if (!STATE.link) return toast('Invite link is not set up yet.');
+  const text = 'Join me and earn coins by completing simple tasks!';
+  const url = 'https://t.me/share/url?url=' + encodeURIComponent(STATE.link) + '&text=' + encodeURIComponent(text);
+  if (tg) tg.openTelegramLink(url); else window.open(url, '_blank');
+}
+
+async function copyLink() {
+  if (!STATE.link) return toast('Invite link is not set up yet.');
+  try { await navigator.clipboard.writeText(STATE.link); toast('Link copied'); }
+  catch { toast('Press and hold the link to copy it.'); }
+}
+
+init();
+</script>
+</body>
+</html>
